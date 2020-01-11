@@ -1,0 +1,41 @@
+{
+   "name": "@toba/overpass-fetch",
+   "description": "Toba Overpass Fetch",
+   "version": "1.0.0",
+   "private": false,
+   "publishConfig": {
+      "access": "public"
+   },
+   "main": "cjs/index.js",
+   "module": "esm/index.js",
+   "types": "esm/index.d.ts",
+   "files": [
+      "esm",
+      "cjs"
+   ],
+   "author": {
+      "name": "Jason Abbott"
+   },
+   "license": "MIT",
+   "scripts": {
+      "build:esm": "./node_modules/.bin/tsc --project ./node_modules/@toba/develop/tsconfig.esm.json",
+      "build:cjs": "./node_modules/.bin/tsc --project ./node_modules/@toba/develop/tsconfig.cjs-min.json",
+      "prepublishOnly": "npm run build:esm & npm run build:cjs",
+      "test": "jest --coverage"
+   },
+   "devDependencies": {
+      "@toba/develop": "^6.7.14",
+      "@toba/test": "^4.1.17"
+   },
+   "repository": {
+      "type": "git",
+      "url": "https://github.com/toba/osm-router"
+   },
+   "#": "https://github.com/nodejs/node-gyp/wiki/Updating-npm's-bundled-node-gyp",
+   "dependencies": {
+      "@toba/node-tools": "^1.5.2",
+      "@types/node": "^13.1.6",
+      "@types/whatwg-fetch": "0.0.33",
+      "whatwg-fetch": "^3.0.0"
+   }
+}
