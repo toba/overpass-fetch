@@ -1,6 +1,8 @@
 {
-   "jest.enableCodeLens": true,
    "files.associations": {
       "*.osm": "xml"
+   },
+   "files.exclude": {
+      "node_modules": true
    }
 }

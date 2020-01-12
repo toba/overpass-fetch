@@ -1,4 +1,5 @@
-import { Format, Statement } from './types';
+import { BoundingBox } from '@toba/osm-models';
+import { Format, Statement, SortBy } from './types';
 
 /**
  * An Overpass query.
@@ -31,7 +32,7 @@ export class Query {
     * The default is `536870912` (512 MB).
     */
    maxSize: number;
-   outputFormat: Format;
+   outputAs: Format;
    /**
     * The global `bbox` setting can define a bounding box that is then
     * implicitly used in all statements (unless a statement specifies a
@@ -43,8 +44,12 @@ export class Query {
     * and each value is separated with a comma. The values are, in order:
     * *southern-most latitude*, *western-most longitude*,
     * *northern-most latitude*, *eastern-most longitude*.
+    *
+    * @example
+    * // around part of Rio de Janeiro, Brazil
+    * [-23, -43.1, -22.8, -43.3]
     */
-   boundingBox: [number, number, number, number];
+   boundingBox: BoundingBox;
 
    /**
     * Global setting which modifies an Overpass QL query to examine attic data,
@@ -59,10 +64,27 @@ export class Query {
     */
    date: Date;
 
+   sortBy?: SortBy;
+
    union: Statement[];
+
+   constructor(box: BoundingBox) {
+      this.boundingBox = box;
+   }
 
    /**
     * Convert query instance to string for transmission to the API.
+    *
+    * @example
+    * [out:json][timeout:25];
+    * (
+    *    node["highway"]({{bbox}});
+    *    way["highway"]({{bbox}});
+    *    relation["highway"]({{bbox}});
+    * );
+    * out body;
+    * >;
+    * out body qt;
     */
    toString(): string {
       return '';
