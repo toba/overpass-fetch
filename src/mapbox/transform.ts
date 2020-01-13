@@ -1,4 +1,5 @@
-import { Tile, MemPoint, MemLine } from './types';
+import { Tile, MemPoint, MemLine, TileFeatureType } from './types';
+import { forEach } from '@toba/node-tools';
 
 /**
  * Transforms the coordinates of each feature in the given tile from
@@ -19,10 +20,12 @@ export function transformTile(tile: Tile, extent: number): Tile {
 
       feature.geometry = [];
 
-      if (type === 1) {
-         for (let j = 0; j < geom.length; j += 2) {
-            feature.geometry.push(
-               transformPoint(geom[j], geom[j + 1], extent, z2, tx, ty)
+      if (type === TileFeatureType.Point) {
+         const line = geom as MemLine;
+
+         for (let j = 0; j < line.length; j += 2) {
+            (feature.geometry as MemLine).push(
+               transformPoint(line[j], line[j + 1], extent, z2, tx, ty)
             );
          }
       } else {
@@ -50,7 +53,7 @@ function transformPoint(
    z2: number,
    tx: number,
    ty: number
-): MemPoint {
+): [number, number] {
    return [
       Math.round(extent * (x * z2 - tx)),
       Math.round(extent * (y * z2 - ty))
