@@ -1,9 +1,7 @@
+import '@toba/test';
+import { simplify } from './simplify';
 
-import simplify from '../src/simplify.js';
-import test from 'tape';
-
-/*eslint comma-spacing:0, no-shadow: 0*/
-
+// prettier-ignore
 const points = [
     [0.22455,0.25015],[0.22691,0.24419],[0.23331,0.24145],[0.23498,0.23606],
     [0.24421,0.23276],[0.26259,0.21531],[0.26776,0.21381],[0.27357,0.20184],
@@ -32,6 +30,7 @@ const points = [
     [0.84716,0.45844],[0.85138,0.46279],[0.85397,0.47115],[0.86636,0.48077]
 ];
 
+// prettier-ignore
 const simplified = [
     [0.22455,0.25015],[0.26776,0.21381],[0.29691,0.15564],[0.33033,0.13757],
     [0.40952,0.14114],[0.4396,0.11974],[0.48651,0.10675],[0.52957,0.12786],
@@ -44,35 +43,42 @@ const simplified = [
     [0.85397,0.47115],[0.86636,0.48077]
 ];
 
-test('simplifies points correctly with the given tolerance', (t) => {
-    const coords = [];
-    for (let i = 0; i < points.length; i++) {
-        coords.push(points[i][0], points[i][1], 0);
-    }
+it('simplifies points correctly with the given tolerance', () => {
+   const coords: number[] = [];
 
-    coords[2] = 1;
-    coords[coords.length - 1] = 1;
-    simplify(coords, 0, coords.length - 3, 0.001 * 0.001);
+   for (let i = 0; i < points.length; i++) {
+      coords.push(points[i][0], points[i][1], 0);
+   }
 
-    const result = [];
-    for (let i = 0; i < coords.length; i += 3) {
-        if (coords[i + 2] > 0.005 * 0.005) {
-            result.push([coords[i], coords[i + 1]]);
-        }
-    }
-    t.same(result, simplified);
-    t.end();
+   coords[2] = 1;
+   coords[coords.length - 1] = 1;
+
+   simplify(coords, 0, coords.length - 3, 0.001 * 0.001);
+
+   const result = [];
+   for (let i = 0; i < coords.length; i += 3) {
+      if (coords[i + 2] > 0.005 * 0.005) {
+         result.push([coords[i], coords[i + 1]]);
+      }
+   }
+
+   expect(result).toEqual(simplified);
 });
 
-test('does not throw max call stack error on bad long input', (t) => {
-    const coords = [];
-    for (let i = 0; i < 1400; i++) {
-        coords.push([0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]);
-    }
+it('does not throw max call stack error on bad long input', () => {
+   const coords: number[] = [];
 
-    t.doesNotThrow(() => {
-        simplify(coords, 2e-15);
-    });
+   for (let i = 0; i < 1400; i++) {
+      coords.push(...[0.0, 0.0], ...[1.0, 0.0], ...[1.0, 1.0], ...[0.0, 1.0]);
+   }
 
-    t.end();
+   let caught: Error | undefined = undefined;
+
+   try {
+      simplify(coords, 2e-15);
+   } catch (e) {
+      caught = e;
+   }
+
+   expect(caught).toBeUndefined();
 });

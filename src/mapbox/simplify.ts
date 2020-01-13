@@ -4,8 +4,8 @@
 export function simplify(
    coords: number[],
    first: number,
-   last: number,
-   sqTolerance: number
+   last: number = 0,
+   sqTolerance: number = 0
 ) {
    let maxSqDist = sqTolerance;
    const mid = (last - first) >> 1;

@@ -7,10 +7,19 @@ import {
    MemLine,
    MemPolygon,
    TileFeatureType,
-   Tags
+   TileLine
 } from './types';
 import { forEach } from '@toba/node-tools';
 import { GeoJsonProperties } from 'geojson';
+
+function eachPoint(
+   line: MemLine,
+   fn: (x: number, y: number, zoom: number) => void
+) {
+   for (let i = 0; i < line.length; i += 3) {
+      fn(line[i], line[i + 1], line[i + 2]);
+   }
+}
 
 /**
  * Simplified tile generation.
@@ -42,13 +51,14 @@ export function createTile(
       maxX: -1,
       maxY: 0
    };
-   for (const feature of features) {
-      addFeature(tile, feature, tolerance, options);
 
-      const minX = feature.minX;
-      const minY = feature.minY;
-      const maxX = feature.maxX;
-      const maxY = feature.maxY;
+   forEach(features, f => {
+      addFeature(tile, f, tolerance, options);
+
+      const minX = f.minX;
+      const minY = f.minY;
+      const maxX = f.maxX;
+      const maxY = f.maxY;
 
       if (minX < tile.minX) {
          tile.minX = minX;
@@ -62,7 +72,8 @@ export function createTile(
       if (maxY > tile.maxY) {
          tile.maxY = maxY;
       }
-   }
+   });
+
    return tile;
 }
 
@@ -74,26 +85,32 @@ function addFeature(
 ) {
    const geom = feature.geometry;
    const type = feature.type;
-   const simplified: number[] = [];
+   const simplified: TileLine | TileLine[] = [];
 
    switch (type) {
       case Type.Point:
       case Type.MultiPoint:
-         const line = geom as MemLine;
-         for (let i = 0; i < line.length; i += 3) {
-            simplified.push(line[i], line[i + 1]);
+         eachPoint(geom as MemLine, (x, y) => {
+            (simplified as TileLine).push(x, y);
             tile.numPoints++;
             tile.numSimplified++;
-         }
+         });
          break;
       case Type.Line:
-         addLine(simplified, geom as MemLine, tile, tolerance, false, false);
+         addLine(
+            simplified as TileLine[],
+            geom as MemLine,
+            tile,
+            tolerance,
+            false,
+            false
+         );
          break;
       case Type.MultiLine:
       case Type.Polygon:
          forEach(geom as MemPolygon, (line, i) =>
             addLine(
-               simplified,
+               simplified as TileLine[],
                line,
                tile,
                tolerance,
@@ -105,7 +122,14 @@ function addFeature(
       case Type.MultiPolygon:
          forEach(geom as MemPolygon[], p =>
             forEach(p, (line, i) =>
-               addLine(simplified, line, tile, tolerance, true, i === 0)
+               addLine(
+                  simplified as TileLine[],
+                  line,
+                  tile,
+                  tolerance,
+                  true,
+                  i === 0
+               )
             )
          );
          break;
@@ -144,7 +168,7 @@ function addFeature(
 }
 
 function addLine(
-   result: number[],
+   result: TileLine[],
    geom: MemLine,
    tile: Tile,
    tolerance: number,
@@ -163,23 +187,21 @@ function addLine(
 
    const ring: number[] = [];
 
-   for (let i = 0; i < geom.length; i += 3) {
-      if (tolerance === 0 || geom[i + 2] > sqTolerance) {
+   eachPoint(geom, (x, y, z) => {
+      if (tolerance === 0 || z > sqTolerance) {
          tile.numSimplified++;
-         ring.push(geom[i], geom[i + 1]);
+         ring.push(x, y);
       }
       tile.numPoints++;
-   }
+   });
 
    if (isPolygon) {
       rewind(ring, isOuter);
    }
-
-   // TODO: pushing array to array?
    result.push(ring);
 }
 
-function rewind(ring: number[], clockwise: boolean) {
+function rewind(ring: TileLine, clockwise: boolean) {
    let area = 0;
 
    for (let i = 0, len = ring.length, j = len - 2; i < len; j = i, i += 2) {

@@ -1,5 +1,11 @@
-import { Tile, MemPoint, MemLine, TileFeatureType } from './types';
+import { Tile, MemLine, TileFeatureType, TileLine } from './types';
 import { forEach } from '@toba/node-tools';
+
+function eachPoint(line: TileLine, fn: (x: number, y: number) => void) {
+   for (let i = 0; i < line.length; i += 2) {
+      fn(line[i], line[i + 1]);
+   }
+}
 
 /**
  * Transforms the coordinates of each feature in the given tile from
@@ -14,32 +20,28 @@ export function transformTile(tile: Tile, extent: number): Tile {
    const tx = tile.x;
    const ty = tile.y;
 
-   for (const feature of tile.features) {
-      const geom = feature.geometry;
-      const type = feature.type;
+   forEach(tile.features, f => {
+      const geom = f.geometry;
+      const type = f.type;
 
-      feature.geometry = [];
+      f.geometry = [];
 
       if (type === TileFeatureType.Point) {
-         const line = geom as MemLine;
-
-         for (let j = 0; j < line.length; j += 2) {
-            (feature.geometry as MemLine).push(
-               transformPoint(line[j], line[j + 1], extent, z2, tx, ty)
+         eachPoint(geom as TileLine, (x, y) => {
+            (f.geometry as TileLine).push(
+               ...transformPoint(x, y, extent, z2, tx, ty)
             );
-         }
+         });
       } else {
-         for (let j = 0; j < geom.length; j++) {
-            const ring: MemLine = [];
-            for (let k = 0; k < geom[j].length; k += 2) {
-               ring.push(
-                  transformPoint(geom[j][k], geom[j][k + 1], extent, z2, tx, ty)
-               );
-            }
-            feature.geometry.push(ring);
-         }
+         forEach(geom as TileLine[], line => {
+            const ring: TileLine = [];
+            eachPoint(line, (x: number, y: number) =>
+               ring.push(...transformPoint(x, y, extent, z2, tx, ty))
+            );
+            (f.geometry as TileLine[]).push(ring);
+         });
       }
-   }
+   });
 
    tile.transformed = true;
 

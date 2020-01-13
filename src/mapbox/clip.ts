@@ -1,4 +1,5 @@
 import { GeoJsonType as Type } from '@toba/map';
+import { forEach } from '@toba/node-tools';
 import { createFeature } from './feature';
 import {
    MemFeature,
@@ -8,7 +9,6 @@ import {
    MemLine,
    MemPolygon
 } from './types';
-import { forEach } from '@toba/node-tools';
 
 /**
  * Stripe clipping algorithm. Clip features between two vertical or horizontal
@@ -18,7 +18,8 @@ import { forEach } from '@toba/node-tools';
  * /   |   \____|____/
  *     |        |
  *
- * k1 and k2 are the line coordinates
+ * @param k1 Lower axis boundary
+ * @param k2 Upper axis boundary
  * @param minAll Minimum coordinate for all features
  * @param maxall Maximum coordinate for all features
  */
@@ -30,7 +31,7 @@ export function clip(
    axis: Axis,
    minAll: number,
    maxAll: number,
-   options: Options
+   options: Partial<Options>
 ): MemFeature[] | null {
    k1 /= scale;
    k2 /= scale;
@@ -43,53 +44,49 @@ export function clip(
       return null;
    }
 
-   const clipped = [];
+   const clipped: MemFeature[] = [];
 
-   for (const feature of features) {
-      const geometry = feature.geometry;
-      let type = feature.type;
+   forEach(features, f => {
+      /** Original geometry */
+      const from = f.geometry;
+      const min = axis === Axis.Horizontal ? f.minX : f.minY;
+      const max = axis === Axis.Horizontal ? f.maxX : f.maxY;
 
-      const min = axis === 0 ? feature.minX : feature.minY;
-      const max = axis === 0 ? feature.maxX : feature.maxY;
+      let type = f.type;
 
       if (min >= k1 && max < k2) {
          // trivial accept
-         clipped.push(feature);
-         continue;
+         clipped.push(f);
+         return;
       } else if (max < k1 || min >= k2) {
          // trivial reject
-         continue;
+         return;
       }
 
-      let newGeometry: MemGeometry = [];
+      /** Clipped geometry */
+      let to: MemGeometry = [];
 
       switch (type) {
          case Type.Point:
          case Type.MultiPoint:
-            clipPoints(
-               geometry as MemLine,
-               newGeometry as MemLine,
-               k1,
-               k2,
-               axis
-            );
+            clipPoints(from as MemLine, to as MemLine, k1, k2, axis);
             break;
          case Type.Line:
             clipLine(
-               geometry as MemLine,
-               newGeometry as MemLine[],
+               from as MemLine,
+               to as MemLine[],
                k1,
                k2,
                axis,
                false,
-               options.lineMetrics
+               options.lineMetrics ?? false
             );
             break;
          case Type.Polygon:
          case Type.MultiLine:
             clipLines(
-               geometry as MemLine[],
-               newGeometry as MemLine[],
+               from as MemLine[],
+               to as MemLine[],
                k1,
                k2,
                axis,
@@ -97,65 +94,68 @@ export function clip(
             );
             break;
          case Type.MultiPolygon:
-            forEach(geometry as MemPolygon[], p => {
+            forEach(from as MemPolygon[], p => {
                const newPolygon: MemPolygon = [];
                clipLines(p, newPolygon, k1, k2, axis, true);
                if (newPolygon.length) {
-                  (newGeometry as MemPolygon[]).push(newPolygon);
+                  (to as MemPolygon[]).push(newPolygon);
                }
             });
             break;
       }
 
-      if (newGeometry.length) {
-         // TODO: verity the type comparison
-         if (options.lineMetrics && type === Type.MultiLine) {
-            for (const line of newGeometry as MemLine[]) {
-               clipped.push(
-                  createFeature(feature.id, type, line, feature.tags)
-               );
+      if (to.length) {
+         if (options.lineMetrics && type === Type.Line) {
+            for (const line of to as MemLine[]) {
+               // to is line array for `Type.Line` because original line may
+               // be sliced into multiple
+               clipped.push(createFeature(f.id, type, line, f.tags));
             }
-            // TODO: what is this doing?
-            continue;
+            return;
          }
 
          if (type === Type.Line || type === Type.MultiLine) {
-            if (newGeometry.length === 1) {
+            if (to.length === 1) {
                type = Type.Line;
-               newGeometry = (newGeometry as MemLine[])[0];
+               to = (to as MemLine[])[0];
             } else {
                type = Type.MultiLine;
             }
          }
+
          if (type === Type.Point || type === Type.MultiPoint) {
-            type = newGeometry.length === 3 ? Type.Point : Type.MultiPoint;
+            type = to.length === 3 ? Type.Point : Type.MultiPoint;
          }
 
-         clipped.push(
-            createFeature(feature.id, type, newGeometry, feature.tags)
-         );
+         clipped.push(createFeature(f.id, type, to, f.tags));
       }
-   }
+   });
 
    return clipped.length ? clipped : null;
 }
 
 function clipPoints(
-   geom: MemLine,
-   newGeom: MemLine,
+   points: MemLine,
+   newPoints: MemLine,
    k1: number,
    k2: number,
    axis: Axis
 ) {
-   for (let i = 0; i < geom.length; i += 3) {
-      const a = geom[i + axis];
+   for (let i = 0; i < points.length; i += 3) {
+      const a = points[i + axis];
 
       if (a >= k1 && a <= k2) {
-         addPoint(newGeom, geom[i], geom[i + 1], geom[i + 2]);
+         addPoint(newPoints, points[i], points[i + 1], points[i + 2]);
       }
    }
 }
 
+/**
+ * @param newLine Array of lines since original `line` may be sliced to fit
+ * boundaries
+ * @param k1 Lower axis boundary
+ * @param k2 Upper axis boundary
+ */
 function clipLine(
    line: MemLine,
    newLine: MemLine[],
@@ -177,7 +177,9 @@ function clipLine(
       const az = line[i + 2];
       const bx = line[i + 3];
       const by = line[i + 4];
+      /** Axis coordinate for point `a` */
       const a = axis === Axis.Horizontal ? ax : ay;
+      /** Axis coordinate for point `b` */
       const b = axis === Axis.Horizontal ? bx : by;
       /** Whether line exits the clip area */
       let exited = false;
@@ -187,7 +189,7 @@ function clipLine(
       }
 
       if (a < k1) {
-         // ---|-->  | (line enters the clip region from the left)
+         // ——|-->  | (line enters the clip region from the left)
          if (b > k1) {
             t = intersect(slice, ax, ay, bx, by, k1);
             if (trackMetrics) {
@@ -195,7 +197,7 @@ function clipLine(
             }
          }
       } else if (a > k2) {
-         // |  <--|--- (line enters the clip region from the right)
+         // |  <--|—— (line enters the clip region from the right)
          if (b < k2) {
             t = intersect(slice, ax, ay, bx, by, k2);
             if (trackMetrics) {
@@ -206,12 +208,12 @@ function clipLine(
          addPoint(slice, ax, ay, az);
       }
       if (b < k1 && a >= k1) {
-         // <--|---  | or <--|-----|--- (line exits the clip region on the left)
+         // <--|——  | or <--|———|—— (line exits the clip region on the left)
          t = intersect(slice, ax, ay, bx, by, k1);
          exited = true;
       }
       if (b > k2 && a <= k2) {
-         // |  ---|--> or ---|-----|--> (line exits the clip region on the right)
+         // |  ——|--> or ——|———|--> (line exits the clip region on the right)
          t = intersect(slice, ax, ay, bx, by, k2);
          exited = true;
       }
@@ -252,7 +254,6 @@ function clipLine(
 
    // add the final slice
    if (slice.length) {
-      // TODO: how is line pushing to line?
       newLine.push(slice);
    }
 }
@@ -278,6 +279,9 @@ function clipLines(
    });
 }
 
+/**
+ * @param z Zoom
+ */
 function addPoint(out: MemLine, x: number, y: number, z: number) {
    out.push(x, y, z);
 }
@@ -289,7 +293,7 @@ function intersectX(
    bx: number,
    by: number,
    x: number
-) {
+): number {
    const t = (x - ax) / (bx - ax);
    addPoint(out, x, ay + (by - ay) * t, 1);
    return t;
@@ -302,7 +306,7 @@ function intersectY(
    bx: number,
    by: number,
    y: number
-) {
+): number {
    const t = (y - ay) / (by - ay);
    addPoint(out, ax + (bx - ax) * t, y, 1);
    return t;

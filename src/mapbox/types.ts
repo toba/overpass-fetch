@@ -8,6 +8,13 @@ export type MemGeometry = MemLine | MemPolygon | MemPolygon[];
 
 export type MemPolygon = MemLine[];
 
+/**
+ * Array of numbers in groups of three such that the first is the `x`
+ * coordinate, next is the `y` coordinate and last is the zoom level.
+ *
+ * @example
+ * [ax, ay, az, bx, by, bz]
+ */
 export interface MemLine extends Array<number> {
    /**
     * Type-specific size of items. For example, if the items describe a line
@@ -89,23 +96,25 @@ export interface Tile {
    source?: MemFeature[];
    x: number;
    y: number;
+   /** Zoom */
    z: number;
-   // TODO: in source or in featuers?
-   /** Minimum `x` coordinate in the `source` */
+   /** Minimum `x` coordinate in the `features` */
    minX: number;
-   /** Minimum `y` coordinate in the `source` */
+   /** Minimum `y` coordinate in the `features` */
    minY: number;
-   /** Maximum `x` coordinate in the `source` */
+   /** Maximum `x` coordinate in the `features` */
    maxX: number;
-   /** Maximum `y` coordinate in the `source` */
+   /** Maximum `y` coordinate in the `features` */
    maxY: number;
    features: TileFeature[];
 }
 
+export type TileLine = number[];
+
 export interface TileFeature {
    id?: string | number;
-   type: number;
-   geometry: MemGeometry;
+   type: TileFeatureType;
+   geometry: TileLine | TileLine[];
    tags: GeoJsonProperties;
 }
 
