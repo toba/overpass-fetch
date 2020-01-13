@@ -3,11 +3,10 @@
    "rules": {
       "no-console": "off",
       "no-continue": "off",
-      "n,
-      o-param-reassign": "off"
+      "no-param-reassign": "off"
    },
    "env": {
       "browser": true,
       "node": true
-  }
+   }
 }
