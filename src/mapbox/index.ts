@@ -4,7 +4,7 @@ import { clip } from './clip';
 import { wrap } from './wrap';
 import { transformTile as transform } from './transform';
 import { createTile } from './tile';
-import { Options, Tile, LogLevel, Coordinate, VectorFeature } from './types';
+import { Options, Tile, LogLevel, Coordinate, MemFeature } from './types';
 
 export default function geojsonvt(data: GeoJSON, options: Options) {
    return new GeoJSONVT(data, options);
@@ -18,7 +18,7 @@ const defaultOptions: Options = {
    extent: 4096,
    buffer: 64,
    lineMetrics: false,
-   generateId: false,
+   generateID: false,
    debug: LogLevel.None
 };
 
@@ -40,7 +40,7 @@ class GeoJSONVT {
       if (options.maxZoom < 0 || options.maxZoom > 24) {
          throw new Error('maxZoom should be in the 0-24 range');
       }
-      if (options.promoteId && options.generateId) {
+      if (options.promoteID && options.generateID) {
          throw new Error('promoteId and generateId cannot be used together.');
       }
 
@@ -100,7 +100,7 @@ class GeoJSONVT {
     * @param cy Target tile `y` coordinate
     */
    splitTile(
-      features: VectorFeature[] | null,
+      features: MemFeature[] | null,
       z: number,
       x: number,
       y: number,
@@ -117,7 +117,7 @@ class GeoJSONVT {
          y = stack.pop() as number;
          x = stack.pop() as number;
          z = stack.pop() as number;
-         features = stack.pop() as VectorFeature[];
+         features = stack.pop() as MemFeature[];
 
          const z2 = 1 << z;
          const id = toID(z, x, y);

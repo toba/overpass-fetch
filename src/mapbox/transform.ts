@@ -1,4 +1,4 @@
-import { Tile, Point, VectorGeometry } from './types';
+import { Tile, MemPoint, MemLine } from './types';
 
 /**
  * Transforms the coordinates of each feature in the given tile from
@@ -27,7 +27,7 @@ export function transformTile(tile: Tile, extent: number): Tile {
          }
       } else {
          for (let j = 0; j < geom.length; j++) {
-            const ring: VectorGeometry = [];
+            const ring: MemLine = [];
             for (let k = 0; k < geom[j].length; k += 2) {
                ring.push(
                   transformPoint(geom[j][k], geom[j][k + 1], extent, z2, tx, ty)
@@ -50,7 +50,7 @@ function transformPoint(
    z2: number,
    tx: number,
    ty: number
-): Point {
+): MemPoint {
    return [
       Math.round(extent * (x * z2 - tx)),
       Math.round(extent * (y * z2 - ty))
