@@ -102,5 +102,5 @@ export const enum SortBy {
 }
 
 export interface Statement {
-   maybe: boolean;
+   maybe: boolean
 }

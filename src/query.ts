@@ -1,5 +1,5 @@
-import { BoundingBox } from '@toba/osm-models';
-import { Format, Statement, SortBy } from './types';
+import { BoundingBox } from '@toba/osm-models'
+import { Format, Statement, SortBy } from './types'
 
 /**
  * An Overpass query.
@@ -14,7 +14,7 @@ export class Query {
     *
     * The default is `180`.
     */
-   timeout: number;
+   timeout: number
 
    /**
     * The maximum allowed memory for the query in bytes RAM on the server, as
@@ -31,8 +31,8 @@ export class Query {
     *
     * The default is `536870912` (512 MB).
     */
-   maxSize: number;
-   outputAs: Format;
+   maxSize: number
+   outputAs: Format
    /**
     * The global `bbox` setting can define a bounding box that is then
     * implicitly used in all statements (unless a statement specifies a
@@ -49,7 +49,7 @@ export class Query {
     * // around part of Rio de Janeiro, Brazil
     * [-23, -43.1, -22.8, -43.3]
     */
-   boundingBox: BoundingBox;
+   boundingBox: BoundingBox
 
    /**
     * Global setting which modifies an Overpass QL query to examine attic data,
@@ -62,14 +62,14 @@ export class Query {
     * OpenStreetMap database standard `ISO 8601` date enclosed in quotes, in the
     * format `YYYY-MM-DDThh:mm:ssZ`.
     */
-   date: Date;
+   date: Date
 
-   sortBy?: SortBy;
+   sortBy?: SortBy
 
-   union: Statement[];
+   union: Statement[]
 
    constructor(box: BoundingBox) {
-      this.boundingBox = box;
+      this.boundingBox = box
    }
 
    /**
@@ -87,6 +87,6 @@ export class Query {
     * out body qt;
     */
    toString(): string {
-      return '';
+      return ''
    }
 }
